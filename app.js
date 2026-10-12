@@ -9,6 +9,120 @@
   const app = document.querySelector("#app");
   const APP_TYPE = document.body.dataset.app || "beheer";
 
+  // ================================================================
+  // 1b. VOLLEDIGE VERSIE: instructie-audio, afbeelding en woordaudio
+  // ================================================================
+  // Alleen met "weergave=volledig" in de link verschijnen de instructie,
+  // de afbeelding en de luisterknop. Zonder die toevoeging ziet de cursist
+  // alleen het dictee (woord, vakjes en toetsenbord), zoals altijd. Zo
+  // blijven alle bestaande links in Genially er precies hetzelfde uitzien.
+
+  const PAGE_PARAMETERS = new URLSearchParams(location.search);
+  const FULL_VIEW =
+    (PAGE_PARAMETERS.get("weergave") || "").trim().toLowerCase() ===
+    "volledig";
+  const MEDIA = {
+    instruction: (PAGE_PARAMETERS.get("instructie") || "").trim(),
+    image: (PAGE_PARAMETERS.get("beeld") || "").trim(),
+    audio: (PAGE_PARAMETERS.get("audio") || "").trim(),
+  };
+
+  // Mappen in deze repository voor eigen bestanden.
+  const IMAGE_FOLDER = "assets/afbeeldingen/";
+  const INSTRUCTION_FOLDER = "assets/audio/instructies/";
+  const WORD_AUDIO_FOLDER = "assets/audio/woorden/";
+
+  // Woordopnames van het klik-klakboekje. Beide tools staan op
+  // ligolimino.github.io, dus het dictee kan ze gebruiken zonder kopie.
+  const KLIKKLAK_WORD_AUDIO = "../klikklak/assets/audio/woorden/";
+
+  // Bestandstypes die geprobeerd worden als er geen extensie getypt is.
+  const IMAGE_EXTENSIONS = [".jpg", ".png", ".webp", ".jpeg"];
+  const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav"];
+
+  if (FULL_VIEW) {
+    document.body.classList.add("full-view");
+  }
+
+  function encodePath(path) {
+    return path
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+  }
+
+  function absoluteUrl(path) {
+    return new URL(path, DATA.baseUrl).href;
+  }
+
+  // Zet een bestandsnaam of link uit Excel om naar een lijst met adressen
+  // die na elkaar geprobeerd worden.
+  function mediaCandidates(value, folder, extensions) {
+    if (!value) return [];
+    const isLink = /^(https?:)?\/\//i.test(value) || /^\.{0,2}\//.test(value);
+    if (isLink) return [absoluteUrl(value)];
+    if (/\.[a-z0-9]{2,4}$/i.test(value)) {
+      return [absoluteUrl(folder + encodePath(value))];
+    }
+    return extensions.map((extension) =>
+      absoluteUrl(folder + encodePath(value + extension)),
+    );
+  }
+
+  function wordAudioCandidates(word) {
+    if (MEDIA.audio.toLowerCase() === "geen") return [];
+    if (MEDIA.audio) {
+      return mediaCandidates(MEDIA.audio, WORD_AUDIO_FOLDER, AUDIO_EXTENSIONS);
+    }
+    // Niets opgegeven: eerst een eigen opname in deze repository, daarna
+    // de opnames van het klik-klakboekje.
+    const file = `${encodeURIComponent(word)}.mp3`;
+    const firstLetter = encodeURIComponent(word.charAt(0));
+    return [
+      absoluteUrl(`${WORD_AUDIO_FOLDER}${firstLetter}/${file}`),
+      absoluteUrl(`${KLIKKLAK_WORD_AUDIO}${firstLetter}/${file}`),
+      absoluteUrl(`${KLIKKLAK_WORD_AUDIO}nonsens/${file}`),
+    ];
+  }
+
+  // Zoekt het eerste adres dat echt bestaat. Het resultaat wordt
+  // onthouden, zodat een klik meteen kan afspelen.
+  const foundMedia = new Map();
+
+  function findFirst(candidates, kind) {
+    const key = `${kind}|${candidates.join("|")}`;
+    if (foundMedia.has(key)) return foundMedia.get(key);
+
+    const search = new Promise((resolve) => {
+      let index = 0;
+      const tryNext = () => {
+        if (index >= candidates.length) {
+          resolve(null);
+          return;
+        }
+        const source = candidates[index];
+        index += 1;
+        const probe = kind === "image" ? new Image() : new Audio();
+        const finish = (ok) => (ok ? resolve(source) : tryNext());
+        if (kind === "image") {
+          probe.onload = () => finish(true);
+          probe.onerror = () => finish(false);
+        } else {
+          probe.preload = "metadata";
+          probe.addEventListener("loadedmetadata", () => finish(true), {
+            once: true,
+          });
+          probe.addEventListener("error", () => finish(false), { once: true });
+        }
+        probe.src = source;
+      };
+      tryNext();
+    });
+
+    foundMedia.set(key, search);
+    return search;
+  }
+
   const STORAGE_PREFIX = DATA.storageNamespace || "letterlab";
   const STORAGE_KEYS = {
     questions: `${STORAGE_PREFIX}-questions-v1`,
@@ -164,6 +278,9 @@
     exercises: loadFromStorage(STORAGE_KEYS.exercises, []),
     editingExerciseId: null,
     publicationMessage: "",
+    // Volledige versie: gevonden afbeelding en instructie.
+    mediaImage: "",
+    instructionFound: false,
   };
 
   function saveToStorage() {
@@ -263,6 +380,194 @@
     return tokenize(word).map(graphemeType).join("");
   }
 
+  // ================================================================
+  // 4. AUDIO (alleen in de volledige versie)
+  // ================================================================
+
+  // Houd audiobestanden bij in plaats van bij elke klik een tijdelijk
+  // Audio-object te maken. Vooral op smartphones kan zo'n tijdelijk object
+  // te laat laden of te vroeg worden opgeruimd, waardoor het begin wegvalt.
+  // (Overgenomen uit het uitgebreide dictee, waar dit getest werd.)
+  const audioCache = new Map();
+  const AUDIO_START_DELAY_MS = 30;
+  const AUDIO_OUTPUT_IDLE_MS = 1200;
+  const AUDIO_WARMUP_LEAD_MS = 180;
+  const AUDIO_WARMUP_TOTAL_MS = 520;
+  let activeAudio = null;
+  let audioContext = null;
+  let lastAudioActivityAt = 0;
+  let audioPlaybackRequest = 0;
+
+  function wait(milliseconds) {
+    return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+  }
+
+  function prepareAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+    }
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+    return audioContext;
+  }
+
+  async function warmUpAudioOutputIfNeeded(context) {
+    const audioWasRecentlyActive =
+      Date.now() - lastAudioActivityAt < AUDIO_OUTPUT_IDLE_MS;
+
+    if (audioWasRecentlyActive) return;
+
+    if (!context) {
+      await wait(AUDIO_WARMUP_LEAD_MS);
+      return;
+    }
+
+    try {
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+      // Volledige digitale stilte zet sommige telefoonluidsprekers niet aan.
+      // Dit uiterst zachte signaal houdt de audio-uitvoer wakker tot het woord
+      // werkelijk begint. Het is normaal niet hoorbaar.
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.frequency.value = 80;
+      gain.gain.value = 0.001;
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + AUDIO_WARMUP_TOTAL_MS / 1000);
+      lastAudioActivityAt = Date.now();
+
+      await wait(AUDIO_WARMUP_LEAD_MS);
+    } catch {
+      await wait(AUDIO_WARMUP_LEAD_MS);
+    }
+  }
+
+  async function playAudioFile(source, fallback) {
+    const context = prepareAudioContext();
+    const requestNumber = ++audioPlaybackRequest;
+
+    if (activeAudio && activeAudio !== audioCache.get(source)) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+    }
+    if ("speechSynthesis" in window) {
+      speechSynthesis.cancel();
+    }
+
+    let audio = audioCache.get(source);
+    if (!audio) {
+      audio = new Audio(source);
+      audio.preload = "auto";
+      audioCache.set(source, audio);
+      audio.load();
+    }
+
+    activeAudio = audio;
+    audio.pause();
+    audio.currentTime = 0;
+
+    try {
+      await warmUpAudioOutputIfNeeded(context);
+      // Als intussen opnieuw werd geklikt, begint deze oudere aanvraag niet.
+      if (requestNumber !== audioPlaybackRequest) return;
+      await wait(AUDIO_START_DELAY_MS);
+      await audio.play();
+      lastAudioActivityAt = Date.now();
+      audio.addEventListener(
+        "ended",
+        () => {
+          lastAudioActivityAt = Date.now();
+          if (activeAudio === audio) activeAudio = null;
+        },
+        { once: true },
+      );
+    } catch {
+      if (audioCache.get(source) === audio) {
+        audioCache.delete(source);
+      }
+      if (fallback) fallback();
+    }
+  }
+
+  // Noodoplossing als er geen opname van het woord bestaat.
+  function speakWithBrowserVoice(text) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "nl-BE";
+    utterance.rate = 0.72;
+    speechSynthesis.speak(utterance);
+  }
+
+  function speakWord(word) {
+    // Volgorde: opgegeven audio, eigen opname, opname van het
+    // klik-klakboekje en pas daarna de browserstem.
+    findFirst(wordAudioCandidates(word), "audio").then((source) => {
+      if (source) {
+        playAudioFile(source, () => speakWithBrowserVoice(word));
+      } else {
+        speakWithBrowserVoice(word);
+      }
+    });
+  }
+
+  function playInstruction() {
+    const candidates = mediaCandidates(
+      MEDIA.instruction,
+      INSTRUCTION_FOLDER,
+      AUDIO_EXTENSIONS,
+    );
+    findFirst(candidates, "audio").then((source) => {
+      if (source) playAudioFile(source);
+    });
+  }
+
+  // Zoekt bij de start de afbeelding en de instructie op. Ontbreekt een
+  // bestand, dan verdwijnt het bijbehorende onderdeel gewoon.
+  function prepareFullView() {
+    if (!FULL_VIEW) return;
+
+    const imageCandidates = mediaCandidates(
+      MEDIA.image,
+      IMAGE_FOLDER,
+      IMAGE_EXTENSIONS,
+    );
+    if (imageCandidates.length) {
+      findFirst(imageCandidates, "image").then((source) => {
+        state.mediaImage = source || "";
+        if (state.mode === "dictation") dictation();
+      });
+    }
+
+    const instructionCandidates = mediaCandidates(
+      MEDIA.instruction,
+      INSTRUCTION_FOLDER,
+      AUDIO_EXTENSIONS,
+    );
+    if (instructionCandidates.length) {
+      findFirst(instructionCandidates, "audio").then((source) => {
+        state.instructionFound = Boolean(source);
+        if (state.mode === "dictation") dictation();
+      });
+    }
+  }
+
+  function instructionBar() {
+    if (!FULL_VIEW || !state.instructionFound) return "";
+    return `<div class="instruction-bar">
+      <button class="play-instruction" data-action="speak-instruction" aria-label="Luister naar de opdracht">
+        ${icon("play")}
+      </button>
+    </div>`;
+  }
+
   function getCurrentQuestion() {
     return state.questions[state.currentQuestionIndex] || DATA.questions[0];
   }
@@ -354,8 +659,21 @@
       )
       .join("");
 
+    // Volledige versie: instructie, luisterknop en afbeelding.
+    const listenButton =
+      FULL_VIEW && MEDIA.audio.toLowerCase() !== "geen"
+        ? `<button class="listen" data-action="speak-word" aria-label="Luister">
+            ${icon("speaker")}
+          </button>`
+        : "";
+    const imageSource = FULL_VIEW ? question.image || state.mediaImage : "";
+    const image = imageSource
+      ? `<img class="dictation-image" src="${escapeHtml(imageSource)}" alt="">`
+      : "";
+
     app.innerHTML = `${header()}
       <section class="screen dictation">
+        ${FULL_VIEW ? `<div class="dictation-media">${instructionBar()}${listenButton}${image}</div>` : ""}
         ${showCopyWord ? `<div class="copy-word">${escapeHtml(question.word)}</div>` : ""}
         <div class="word-slots">${slots}</div>
         ${feedback}
@@ -932,6 +1250,10 @@
     } else if (action === "booklet") {
       state.mode = "booklet";
       render();
+    } else if (action === "speak-word") {
+      speakWord(getCurrentQuestion().word);
+    } else if (action === "speak-instruction") {
+      playInstruction();
     } else if (action === "erase" && !state.result) {
       state.typed = state.typed.slice(0, -1);
       dictation();
@@ -981,4 +1303,5 @@
 
   // Start de app voor de eerste keer op.
   render();
+  prepareFullView();
 })();

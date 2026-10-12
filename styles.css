@@ -883,3 +883,96 @@ button {
     min-height: 42px;
   }
 }
+
+/* ================================================================
+   9. Volledige versie (link met weergave=volledig)
+   ================================================================ */
+
+/* Instructiebalk bovenaan met één ronde afspeelknop. */
+.instruction-bar {
+  align-self: stretch;
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 8px;
+  border-bottom: 1px solid var(--line);
+}
+.play-instruction {
+  width: 52px;
+  height: 52px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.play-instruction .icon {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+.play-instruction:focus-visible {
+  outline: 3px solid rgba(231, 66, 122, 0.45);
+  outline-offset: 3px;
+}
+@media (max-height: 740px) {
+  .instruction-bar {
+    padding: 2px 0 4px;
+  }
+  .play-instruction {
+    width: 42px;
+    height: 42px;
+  }
+  .play-instruction .icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Staand: de onderdelen staan gewoon onder elkaar. */
+.dictation-media {
+  display: contents;
+}
+
+/* Liggende gsm: instructie, luisterknop en afbeelding links, het dictee
+   rechts. Anders is er te weinig hoogte voor alles. */
+@media (orientation: landscape) and (max-height: 620px) {
+  .full-view .screen.dictation {
+    display: grid;
+    grid-template-columns: minmax(110px, 28%) minmax(0, 1fr);
+    grid-auto-rows: auto;
+    align-content: center;
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 2px;
+    width: 100%;
+    max-width: none;
+  }
+  .full-view .dictation > * {
+    grid-column: 2;
+    justify-self: stretch;
+  }
+  .full-view .dictation > .copy-word,
+  .full-view .dictation > .word-slots,
+  .full-view .dictation > .feedback {
+    justify-self: center;
+  }
+  .full-view .dictation > .dictation-media {
+    grid-column: 1;
+    grid-row: 1 / span 4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .full-view .dictation-media .instruction-bar {
+    border-bottom: 0;
+    padding: 0;
+  }
+  .full-view .dictation-media .dictation-image {
+    max-width: 100%;
+    max-height: 38svh;
+  }
+}
