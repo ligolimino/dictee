@@ -976,3 +976,9 @@ button {
     max-height: 38svh;
   }
 }
+
+/* Knop "Opnieuw" na een juist antwoord: rustig, in de basiskleur. */
+.feedback .icon-btn.again {
+  background: var(--blue);
+  color: var(--teal-dark);
+}

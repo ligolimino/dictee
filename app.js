@@ -633,8 +633,10 @@
         state.currentQuestionIndex < state.questions.length - 1
           ? iconButton("next", "next-question", "Volgende", "good")
           : "";
+      // Ook na een juist antwoord kan de cursist het woord opnieuw proberen.
       feedback = `<div class="feedback good">
         ${icon("check")}
+        ${iconButton("retry", "retry", "Opnieuw", "again")}
         ${nextButton}
       </div>`;
     }
