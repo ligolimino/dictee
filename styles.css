@@ -1065,5 +1065,13 @@ button {
 
 /* Wisknop: heel licht grijsblauw */
 .key.erase {
-  background: #eef2f4;
+  background: #eef8f9;
+}
+
+/* Doorzichtige achtergrond: de Genially-dia is zichtbaar rond de oefening,
+   zonder blend mode. De toetsen blijven wit. */
+html,
+body,
+.app-shell {
+  background: transparent;
 }
