@@ -65,6 +65,7 @@ button {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  margin-top: 0.4em;
 }
 .app-shell {
   min-height: 100svh;
@@ -335,11 +336,11 @@ button {
 .slot {
   min-width: 54px;
   padding: 3px 8px 2px;
-  border-bottom: 5px solid var(--teal);
-  font-size: clamp(2.3rem, 10vw, 4.8rem);
+  border-bottom: 3px solid var(--teal);
+  font-size: clamp(3.0rem, 15vw, 5.2rem);
   line-height: 1;
   text-align: center;
-  font-weight: 700;
+  font-weight: 400;
 }
 .slot.missing {
   color: var(--pink);
@@ -824,7 +825,7 @@ button {
   .slot {
     min-width: 38px;
     padding: 2px 5px 1px;
-    border-bottom-width: 3px;
+    border-bottom-width: 2px;
     font-size: clamp(1.8rem, 8vw, 2.7rem);
   }
 
@@ -850,6 +851,13 @@ button {
     min-height: 46px;
     border-radius: 9px;
     font-size: clamp(1.2rem, 5vw, 1.55rem);
+  }
+  .copy-word {
+    font-size: clamp(2.2rem, 10vw, 3.2rem);
+  }
+  .slot {
+    font-size: clamp(2.4rem, 11vw, 3.4rem);
+    min-width: 46px;
   }
 }
 
@@ -942,7 +950,7 @@ button {
   .full-view .screen.dictation {
     display: grid;
     grid-template-columns: minmax(110px, 28%) minmax(0, 1fr);
-    grid-auto-rows: auto;
+    grid-auto: auto;
     align-content: center;
     align-items: center;
     column-gap: 14px;
@@ -981,4 +989,45 @@ button {
 .feedback .icon-btn.again {
   background: var(--blue);
   color: var(--teal-dark);
+}
+
+/* Alle toetsen even breed: een tiende van de rij. De wisknop staat
+   achteraan de onderste rij en is twee toetsen breed. */
+.key-row {
+  --kg: 4px;
+  gap: var(--kg);
+}
+@media (max-height: 740px) {
+  .key-row {
+    --kg: 3px;
+  }
+}
+.key-row .key {
+  flex: 0 0 calc((100% - 9 * var(--kg)) / 10);
+  min-width: 0;
+}
+.key-row .key.erase {
+  flex-basis: calc((100% - 9 * var(--kg)) / 10 * 2 + var(--kg));
+}
+.key.erase .icon {
+  stroke-width: 1.6;
+  width: 26px;
+  height: 26px;
+}
+
+.copy-word {
+  font-size: clamp(2.2rem, 10vw, 3.2rem);
+}
+.slot {
+  font-size: clamp(2.4rem, 11vw, 3.4rem);
+  min-width: 46px;
+}
+
+/* Cijferblok: drie grote toetsen per rij */
+.keyboard.numbers .key-row .key {
+  flex-basis: calc((100% - 2 * var(--kg)) / 3);
+  max-width: 110px;
+}
+.keyboard.numbers .key-row .key.erase {
+  flex-basis: calc((100% - 2 * var(--kg)) / 3);
 }

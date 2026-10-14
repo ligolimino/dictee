@@ -358,7 +358,7 @@
     const clean = word
       .toLowerCase()
       .trim()
-      .replace(/[^a-zà-ÿ]/g, "");
+        .replace(/[^a-zà-ÿ0-9]/g, "");
     const out = [];
     let i = 0;
     const compounds = [...DATA.compoundGraphemes].sort(
@@ -646,20 +646,35 @@
         ${iconButton("retry", "retry", "Opnieuw", "bad")}
       </div>`;
     }
-
-    const keyboardRows = DATA.keyboard
-      .map(
-        (row) =>
-          `<div class="key-row">
+    // Toetsenbord uit de link: toetsen=cijfers of toetsen=beide.
+    const keyboardMode = (
+        new URLSearchParams(location.search).get("toetsen") || ""
+    ).toLowerCase();
+    const keyboardLayout =
+        keyboardMode === "cijfers"
+            ? DATA.numberPad
+            : keyboardMode === "beide"
+                ? [DATA.numberRow, ...DATA.keyboard]
+                : DATA.keyboard;
+    const lastRow = keyboardLayout.length - 1;
+    const keyboardRows = keyboardLayout
+        .map(
+            (row, rowIndex) =>
+                `<div class="key-row">
             ${row
-              .map(
-                (letter) =>
-                  `<button class="key" data-key="${letter}">${letter}</button>`,
-              )
-              .join("")}
+                    .map(
+                        (letter) =>
+                            `<button class="key" data-key="${letter}">${letter}</button>`,
+                    )
+                    .join("")}
+            ${
+                    rowIndex === lastRow
+                        ? `<button class="key erase" data-action="erase" aria-label="Wis">${icon("erase")}</button>`
+                        : ""
+                }
           </div>`,
-      )
-      .join("");
+        )
+        .join("");
 
     // Volledige versie: instructie, luisterknop en afbeelding.
     const listenButton =
@@ -679,12 +694,10 @@
         ${showCopyWord ? `<div class="copy-word">${escapeHtml(question.word)}</div>` : ""}
         <div class="word-slots">${slots}</div>
         ${feedback}
-        <div class="keyboard">
+                <div class="keyboard ${keyboardMode === "cijfers" ? "numbers" : ""}">
           ${keyboardRows}
           <div class="key-row">
-            <button class="key wide" data-action="erase" aria-label="Wis">
-              ${icon("back")}
-            </button>
+            
           </div>
         </div>
       </section>`;
