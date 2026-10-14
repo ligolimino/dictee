@@ -11,12 +11,12 @@
 @font-face {
   font-family: Andika;
   src: url("assets/fonts/andika-700.woff2") format("woff2");
-  font-weight: 400;
+  font-weight: 700;
   font-display: swap;
 }
 :root {
   /* Pas hier de hoofdkleuren van de volledige app aan. */
-  --ink: #056181;
+  --ink: #173042;
   --teal: #087f8c;
   --teal-dark: #08646d;
   --blue: #d9f2f4;
@@ -87,7 +87,7 @@ button {
   border-bottom: 1px solid var(--line);
 }
 .brand {
-  font-weight: 400;
+  font-weight: 700;
   color: var(--teal);
   letter-spacing: 0.02em;
 }
@@ -253,7 +253,7 @@ button {
   margin-bottom: 8px;
   color: var(--ink);
   font-size: clamp(2rem, 9vw, 4.5rem);
-  font-weight: 400;
+  font-weight: 700;
   text-align: center;
 }
 
@@ -277,7 +277,7 @@ button {
   align-items: center;
   gap: 10px;
   margin: 14px 0;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .check-option input {
@@ -292,7 +292,7 @@ button {
   gap: 8px;
   margin-top: 8px;
   font-size: 0.95rem;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .question-option input {
@@ -457,7 +457,7 @@ button {
   align-items: center;
   gap: 4px;
   font-size: clamp(3.6rem, 18vw, 8rem);
-  font-weight: 400;
+  font-weight: 700;
   color: var(--teal-dark);
 }
 .book-columns {
@@ -477,7 +477,7 @@ button {
   background: #fff;
   color: var(--ink);
   font-size: clamp(2.2rem, 10vw, 4.6rem);
-  font-weight: 400;
+  font-weight: 700;
   display: grid;
   place-items: center;
 }
@@ -533,7 +533,7 @@ button {
   margin-bottom: 14px;
 }
 .field label {
-  font-weight: 400;
+  font-weight: 700;
 }
 .text-input,
 .select {
@@ -575,7 +575,7 @@ button {
   padding: 10px 16px;
   background: var(--teal);
   color: #fff;
-  font-weight: 400;
+  font-weight: 700;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -602,7 +602,7 @@ button {
 }
 .series-word {
   font-size: 1.25rem;
-  font-weight: 400;
+  font-weight: 700;
   flex: 1;
 }
 .series-pattern {
@@ -635,7 +635,7 @@ button {
   border: 2px solid var(--line);
   border-radius: 12px;
   background: #fff;
-  font-weight: 400;
+  font-weight: 700;
 }
 .suggestion.added {
   background: #e7f7f0;
