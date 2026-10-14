@@ -1075,3 +1075,8 @@ body,
 .app-shell {
   background: transparent;
 }
+
+/* Meer ruimte tussen het woord en het vinkje/kruisje met Opnieuw */
+.feedback {
+  margin-top: 10px;
+}
