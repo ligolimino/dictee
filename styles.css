@@ -343,8 +343,8 @@ button {
   font-weight: 400;
 }
 .slot.missing {
-  color: var(--pink);
-  border-color: var(--pink);
+  color: #9ec7cb;
+  border-color: #b9d5d8;
 }
 .slot.wrong {
   color: var(--bad);
