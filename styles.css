@@ -326,12 +326,17 @@ button {
   flex-wrap: wrap;
   gap: 5px;
   margin-top: 6px;
+  color: #09b9bb;
+  border-color: #09b9bb;
 }
 
 .series-missing .chip {
   min-width: 38px;
   min-height: 38px;
   padding: 5px 9px;
+  color: #09b9bb;
+  border-color: #09b9bb;
+
 }
 .slot {
   min-width: 54px;
