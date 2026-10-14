@@ -602,11 +602,11 @@ button {
 }
 .series-word {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 400;
   flex: 1;
 }
 .series-pattern {
-  color: #5c7280;
+  color: var(--ink);
   font-size: 0.9rem;
 }
 .series-item .icon-btn {
