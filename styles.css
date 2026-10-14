@@ -341,10 +341,11 @@ button {
   line-height: 1;
   text-align: center;
   font-weight: 400;
+  color: #056181;
 }
 .slot.missing {
-  color: #9ec7cb;
-  border-color: #b9d5d8;
+  color: #09b9bb;
+  border-color: #09b9bb;
 }
 .slot.wrong {
   color: var(--bad);
