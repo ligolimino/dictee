@@ -16,7 +16,7 @@
 }
 :root {
   /* Pas hier de hoofdkleuren van de volledige app aan. */
-  --ink: #173042;
+  --ink: #056181;
   --teal: #087f8c;
   --teal-dark: #08646d;
   --blue: #d9f2f4;
@@ -822,6 +822,8 @@ button {
     margin-bottom: 2px;
     font-size: clamp(1.65rem, 7vw, 2.4rem);
     line-height: 1;
+    color: var(--ink);
+    font-weight: 400;
   }
 
   .word-slots {
