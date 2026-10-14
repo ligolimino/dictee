@@ -319,6 +319,7 @@ button {
 .series-question {
   flex: 1;
   min-width: 0;
+  color: #056181;
 }
 
 .series-missing {
