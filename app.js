@@ -69,10 +69,22 @@
     );
   }
 
-  function wordAudioCandidates(word) {
-    if (MEDIA.audio.toLowerCase() === "geen") return [];
-    if (MEDIA.audio) {
-      return mediaCandidates(MEDIA.audio, WORD_AUDIO_FOLDER, AUDIO_EXTENSIONS);
+  // Bij een reeks heeft elk woord een eigen afbeelding en audio. Oudere
+  // links hebben er één voor de hele oefening.
+  function audioValueOf(question) {
+    return question.audio || MEDIA.audio;
+  }
+
+  function imageValueOf(question) {
+    return question.beeld || MEDIA.image;
+  }
+
+  function wordAudioCandidates(question) {
+    const word = question.word;
+    const audio = audioValueOf(question);
+    if (audio.toLowerCase() === "geen") return [];
+    if (audio) {
+      return mediaCandidates(audio, WORD_AUDIO_FOLDER, AUDIO_EXTENSIONS);
     }
     // Niets opgegeven: eerst een eigen opname in deze repository, daarna
     // de opnames van het klik-klakboekje.
@@ -139,48 +151,59 @@
     }
   }
 
+  // Een link kan één woord of een reeks woorden bevatten. Bij een reeks
+  // staan de woorden gescheiden door "|", en de andere waarden in dezelfde
+  // volgorde:
+  //   ?woord=kraan|kip&ontbreekt=1,2|3&beeld=kraan|kip&audio=|kip2
+  // Staat er bij ontbreekt, voorbeeld, beeld of audio maar één waarde,
+  // dan geldt die voor alle woorden.
   function decodeShortExerciseFromUrl() {
     const parameters = new URLSearchParams(location.search);
-    const enteredWord = parameters.get("woord")?.trim().toLowerCase();
-    const enteredPositions = parameters.get("ontbreekt");
+    const listOf = (name) =>
+      (parameters.get(name) || "").split("|").map((value) => value.trim());
+    const valueFor = (list, index) =>
+      list.length === 1 ? list[0] : (list[index] ?? "");
 
-    if (!enteredWord || !enteredPositions) {
-      return null;
-    }
+    const words = listOf("woord").map((word) => word.toLowerCase());
+    const positionLists = listOf("ontbreekt");
+    const examples = listOf("voorbeeld");
+    const images = listOf("beeld");
+    const audios = listOf("audio");
 
-    const graphemes = tokenize(enteredWord);
-    const missing = [
-      ...new Set(
-        enteredPositions
-          .split(",")
-          .map((position) => Number.parseInt(position.trim(), 10) - 1)
-          .filter(
-            (position) =>
-              Number.isInteger(position) &&
-              position >= 0 &&
-              position < graphemes.length,
-          ),
-      ),
-    ];
+    const questions = [];
+    words.forEach((enteredWord, index) => {
+      const graphemes = tokenize(enteredWord);
+      if (!graphemes.length) return;
 
-    if (!graphemes.length || !missing.length) {
-      return null;
-    }
+      const enteredPositions = valueFor(positionLists, index);
+      let missing = [
+        ...new Set(
+          enteredPositions
+            .split(",")
+            .map((position) => Number.parseInt(position.trim(), 10) - 1)
+            .filter(
+              (position) =>
+                Number.isInteger(position) &&
+                position >= 0 &&
+                position < graphemes.length,
+            ),
+        ),
+      ];
+      // Niets (geldigs) opgegeven: de cursist typt het hele woord.
+      if (!missing.length) missing = [...graphemes.keys()];
 
-    const showCopyWord =
-      parameters.get("voorbeeld")?.trim().toLowerCase() === "ja";
+      questions.push({
+        word: graphemes.join(""),
+        graphemes,
+        missing,
+        showCopyWord: valueFor(examples, index).toLowerCase() === "ja",
+        image: "",
+        beeld: valueFor(images, index),
+        audio: valueFor(audios, index),
+      });
+    });
 
-    return {
-      questions: [
-        {
-          word: graphemes.join(""),
-          graphemes,
-          missing,
-          showCopyWord,
-          image: "",
-        },
-      ],
-    };
+    return questions.length ? { questions } : null;
   }
 
   function decodeExerciseFromUrl() {
@@ -278,8 +301,8 @@
     exercises: loadFromStorage(STORAGE_KEYS.exercises, []),
     editingExerciseId: null,
     publicationMessage: "",
-    // Volledige versie: gevonden afbeelding en instructie.
-    mediaImage: "",
+    // Volledige versie: gevonden afbeeldingen (per vraag) en instructie.
+    mediaImages: {},
     instructionFound: false,
   };
 
@@ -506,10 +529,11 @@
     speechSynthesis.speak(utterance);
   }
 
-  function speakWord(word) {
+  function speakWord(question) {
+    const word = question.word;
     // Volgorde: opgegeven audio, eigen opname, opname van het
     // klik-klakboekje en pas daarna de browserstem.
-    findFirst(wordAudioCandidates(word), "audio").then((source) => {
+    findFirst(wordAudioCandidates(question), "audio").then((source) => {
       if (source) {
         playAudioFile(source, () => speakWithBrowserVoice(word));
       } else {
@@ -534,17 +558,23 @@
   function prepareFullView() {
     if (!FULL_VIEW) return;
 
-    const imageCandidates = mediaCandidates(
-      MEDIA.image,
-      IMAGE_FOLDER,
-      IMAGE_EXTENSIONS,
-    );
-    if (imageCandidates.length) {
+    // Alle afbeeldingen van de reeks meteen opzoeken, zodat het volgende
+    // woord zonder wachten verschijnt.
+    state.questions.forEach((question, index) => {
+      const imageCandidates = mediaCandidates(
+        imageValueOf(question),
+        IMAGE_FOLDER,
+        IMAGE_EXTENSIONS,
+      );
+      if (!imageCandidates.length) return;
       findFirst(imageCandidates, "image").then((source) => {
-        state.mediaImage = source || "";
-        if (state.mode === "dictation") dictation();
+        state.mediaImages[index] = source || "";
+        if (source) new Image().src = source;
+        if (state.mode === "dictation" && index === state.currentQuestionIndex) {
+          dictation();
+        }
       });
-    }
+    });
 
     const instructionCandidates = mediaCandidates(
       MEDIA.instruction,
@@ -627,17 +657,27 @@
       })
       .join("");
 
+    const isSeries = state.questions.length > 1;
+    const isLastQuestion =
+      state.currentQuestionIndex >= state.questions.length - 1;
+
     let feedback = '<div class="feedback"></div>';
-    if (state.result === "good") {
-      const nextButton =
-        state.currentQuestionIndex < state.questions.length - 1
-          ? iconButton("next", "next-question", "Volgende", "good")
-          : "";
+    if (state.result === "good" && isSeries && !isLastQuestion) {
+      // Reeks: het volgende woord komt vanzelf. Met de knop gaat het sneller.
+      feedback = `<div class="feedback good">
+        ${icon("check")}
+        ${iconButton("next", "next-question", "Volgende", "good")}
+      </div>`;
+    } else if (state.result === "good" && isSeries) {
+      feedback = `<div class="feedback good">
+        ${icon("check")}
+        ${iconButton("retry", "restart-dictation", "Opnieuw beginnen", "again")}
+      </div>`;
+    } else if (state.result === "good") {
       // Ook na een juist antwoord kan de cursist het woord opnieuw proberen.
       feedback = `<div class="feedback good">
         ${icon("check")}
         ${iconButton("retry", "retry", "Opnieuw", "again")}
-        ${nextButton}
       </div>`;
     }
     if (state.result === "wrong") {
@@ -678,19 +718,40 @@
 
     // Volledige versie: instructie, luisterknop en afbeelding.
     const listenButton =
-      FULL_VIEW && MEDIA.audio.toLowerCase() !== "geen"
+      FULL_VIEW && audioValueOf(question).toLowerCase() !== "geen"
         ? `<button class="listen" data-action="speak-word" aria-label="Luister">
             ${icon("speaker")}
           </button>`
         : "";
-    const imageSource = FULL_VIEW ? question.image || state.mediaImage : "";
+    const imageSource = FULL_VIEW
+      ? question.image || state.mediaImages[state.currentQuestionIndex] || ""
+      : "";
     const image = imageSource
       ? `<img class="dictation-image" src="${escapeHtml(imageSource)}" alt="">`
       : "";
 
+    // Bij een reeks: een bolletje per woord, zodat de cursist ziet hoeveel
+    // woorden er nog komen.
+    const progress = isSeries
+      ? `<div class="series-progress" aria-label="Woord ${state.currentQuestionIndex + 1} van ${state.questions.length}">
+          ${state.questions
+            .map((_, index) => {
+              const status =
+                index < state.currentQuestionIndex ||
+                (index === state.currentQuestionIndex && state.result === "good")
+                  ? "done"
+                  : index === state.currentQuestionIndex
+                    ? "current"
+                    : "";
+              return `<span class="${status}"></span>`;
+            })
+            .join("")}
+        </div>`
+      : "";
+
     app.innerHTML = `${header()}
       <section class="screen dictation">
-        ${FULL_VIEW ? `<div class="dictation-media">${instructionBar()}${listenButton}${image}</div>` : ""}
+        ${FULL_VIEW ? `<div class="dictation-media">${instructionBar()}${progress}${listenButton}${image}</div>` : progress}
         ${showCopyWord ? `<div class="copy-word">${escapeHtml(question.word)}</div>` : ""}
         <div class="word-slots">${slots}</div>
         ${feedback}
@@ -1002,6 +1063,30 @@
     saveToStorage();
   }
 
+  // Reeks: na een juist antwoord verschijnt na een korte pauze vanzelf het
+  // volgende woord.
+  const NEXT_QUESTION_DELAY_MS = 1400;
+  let nextQuestionTimer = null;
+
+  function scheduleNextQuestion() {
+    if (state.currentQuestionIndex >= state.questions.length - 1) return;
+    window.clearTimeout(nextQuestionTimer);
+    nextQuestionTimer = window.setTimeout(
+      goToNextQuestion,
+      NEXT_QUESTION_DELAY_MS,
+    );
+  }
+
+  function goToNextQuestion() {
+    window.clearTimeout(nextQuestionTimer);
+    if (state.mode !== "dictation") return;
+    if (state.currentQuestionIndex >= state.questions.length - 1) return;
+    state.currentQuestionIndex += 1;
+    state.typed = "";
+    state.result = "";
+    dictation();
+  }
+
   function moveQuestion(index, direction) {
     const newIndex = index + direction;
     if (newIndex < 0 || newIndex >= state.questions.length) return;
@@ -1174,6 +1259,7 @@
       if (answerIsComplete) {
         const answerIsCorrect = state.typed === expectedAnswer;
         state.result = answerIsCorrect ? "good" : "wrong";
+        if (answerIsCorrect) scheduleNextQuestion();
       }
 
       dictation();
@@ -1266,7 +1352,7 @@
       state.mode = "booklet";
       render();
     } else if (action === "speak-word") {
-      speakWord(getCurrentQuestion().word);
+      speakWord(getCurrentQuestion());
     } else if (action === "speak-instruction") {
       playInstruction();
     } else if (action === "erase" && !state.result) {
@@ -1277,12 +1363,9 @@
       state.result = "";
       dictation();
     } else if (action === "next-question") {
-      if (state.currentQuestionIndex >= state.questions.length - 1) return;
-      state.currentQuestionIndex += 1;
-      state.typed = "";
-      state.result = "";
-      dictation();
+      goToNextQuestion();
     } else if (action === "restart-dictation") {
+      window.clearTimeout(nextQuestionTimer);
       state.currentQuestionIndex = 0;
       state.typed = "";
       state.result = "";

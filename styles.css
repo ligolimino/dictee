@@ -994,6 +994,29 @@ button {
   }
 }
 
+/* Reeks van meerdere woorden: een bolletje per woord. */
+.series-progress {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 6px 0 2px;
+}
+.series-progress span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--line);
+  transition: background 200ms ease, transform 200ms ease;
+}
+.series-progress .current {
+  background: var(--teal);
+  transform: scale(1.25);
+}
+.series-progress .done {
+  background: var(--good);
+}
+
 /* Knop "Opnieuw" na een juist antwoord: rustig, in de basiskleur. */
 .feedback .icon-btn.again {
   background: var(--blue);

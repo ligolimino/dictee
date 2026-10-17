@@ -45,6 +45,23 @@ Extra mogelijkheden in de link (alleen samen met `weergave=volledig`):
 - Bestanden toevoegen: open op github.com de map en kies
   **Add file → Upload files**.
 
+### Meerdere woorden na elkaar (reeks)
+
+Zet de woorden in één link, gescheiden door `|`. De andere waarden staan in
+dezelfde volgorde:
+
+```
+?woord=kip|vis|maan&ontbreekt=1,2,3|2|1,2,3&weergave=volledig&beeld=kip|vis|maan
+```
+
+- Na een juist antwoord verschijnt na een korte pauze vanzelf het volgende
+  woord. Bolletjes bovenaan tonen hoeveel woorden er zijn.
+- Staat bij `ontbreekt`, `voorbeeld`, `beeld` of `audio` maar één waarde, dan
+  geldt die voor alle woorden. Een lege plaats (`kip||maan`) betekent: bij dat
+  woord niets.
+- De maaktool (`create`) biedt de reeks alleen bij **Volledig** aan. In
+  Genially blijft het één woord per pagina.
+
 ### Waar komt het geluid van het woord vandaan?
 
 Laat je **Audio woord** leeg, dan zoekt het dictee zelf, in deze volgorde:
