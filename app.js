@@ -29,12 +29,34 @@
 
   // Mappen in deze repository voor eigen bestanden.
   const IMAGE_FOLDER = "assets/afbeeldingen/";
-  const INSTRUCTION_FOLDER = "assets/audio/instructies/";
-  const WORD_AUDIO_FOLDER = "assets/audio/woorden/";
 
-  // Woordopnames van het klik-klakboekje. Beide tools staan op
-  // ligolimino.github.io, dus het dictee kan ze gebruiken zonder kopie.
+  // Alle opnames staan centraal in de repository 'audio'
+  // (ligolimino.github.io/audio/). De oude mappen blijven als tweede kans
+  // bestaan, zodat oudere links altijd blijven werken.
+  const CENTRAL_AUDIO = "../audio/";
+  const INSTRUCTION_FOLDERS = [
+    `${CENTRAL_AUDIO}instructies/`,
+    "assets/audio/instructies/",
+  ];
+  const WORD_AUDIO_FOLDER = "assets/audio/woorden/";
   const KLIKKLAK_WORD_AUDIO = "../klikklak/assets/audio/woorden/";
+  const WORD_ROOTS = [
+    `${CENTRAL_AUDIO}woorden/`,
+    WORD_AUDIO_FOLDER,
+    KLIKKLAK_WORD_AUDIO,
+  ];
+  // Een opgegeven audionaam (audio=...) kan een woord of een zin zijn.
+  const NAMED_AUDIO_FOLDERS = [
+    `${CENTRAL_AUDIO}zinnen/`,
+    WORD_AUDIO_FOLDER,
+  ];
+
+  // Namen die Windows niet toelaat als bestandsnaam. De opname van
+  // bv. het woord 'nul' heet daarom 'nul_.mp3'.
+  const RESERVED_NAMES = ["con", "prn", "aux", "nul"];
+  function audioFileName(word) {
+    return RESERVED_NAMES.includes(word) ? `${word}_` : word;
+  }
 
   // Bestandstypes die geprobeerd worden als er geen extensie getypt is.
   const IMAGE_EXTENSIONS = [".jpg", ".png", ".webp", ".jpeg"];
@@ -57,16 +79,33 @@
 
   // Zet een bestandsnaam of link uit Excel om naar een lijst met adressen
   // die na elkaar geprobeerd worden.
+  // 'folder' mag ook een lijst van mappen zijn: die worden in volgorde
+  // geprobeerd.
   function mediaCandidates(value, folder, extensions) {
     if (!value) return [];
     const isLink = /^(https?:)?\/\//i.test(value) || /^\.{0,2}\//.test(value);
     if (isLink) return [absoluteUrl(value)];
+    const folders = [].concat(folder);
     if (/\.[a-z0-9]{2,4}$/i.test(value)) {
-      return [absoluteUrl(folder + encodePath(value))];
+      return folders.map((place) => absoluteUrl(place + encodePath(value)));
     }
-    return extensions.map((extension) =>
-      absoluteUrl(folder + encodePath(value + extension)),
+    return folders.flatMap((place) =>
+      extensions.map((extension) =>
+        absoluteUrl(place + encodePath(value + extension)),
+      ),
     );
+  }
+
+  // Alle plaatsen waar de opname van één woord kan staan.
+  function wordFileCandidates(word) {
+    const lower = word.toLowerCase();
+    const file = `${encodeURIComponent(audioFileName(lower))}.mp3`;
+    const firstLetter = encodeURIComponent(lower.charAt(0));
+    return WORD_ROOTS.flatMap((root) =>
+      root === WORD_AUDIO_FOLDER
+        ? [`${root}${firstLetter}/${file}`]
+        : [`${root}${firstLetter}/${file}`, `${root}nonsens/${file}`],
+    ).map(absoluteUrl);
   }
 
   // Bij een reeks heeft elk woord een eigen afbeelding en audio. Oudere
@@ -84,17 +123,14 @@
     const audio = audioValueOf(question);
     if (audio.toLowerCase() === "geen") return [];
     if (audio) {
-      return mediaCandidates(audio, WORD_AUDIO_FOLDER, AUDIO_EXTENSIONS);
+      const named = mediaCandidates(audio, NAMED_AUDIO_FOLDERS, AUDIO_EXTENSIONS);
+      // Een gewone naam (bv. audio=kat) kan ook een woordopname zijn.
+      const plainWord = /^[a-zà-ÿ]+$/i.test(audio) ? wordFileCandidates(audio) : [];
+      return [...named, ...plainWord];
     }
-    // Niets opgegeven: eerst een eigen opname in deze repository, daarna
-    // de opnames van het klik-klakboekje.
-    const file = `${encodeURIComponent(word)}.mp3`;
-    const firstLetter = encodeURIComponent(word.charAt(0));
-    return [
-      absoluteUrl(`${WORD_AUDIO_FOLDER}${firstLetter}/${file}`),
-      absoluteUrl(`${KLIKKLAK_WORD_AUDIO}${firstLetter}/${file}`),
-      absoluteUrl(`${KLIKKLAK_WORD_AUDIO}nonsens/${file}`),
-    ];
+    // Niets opgegeven: zoek de opname van het woord zelf, eerst in de
+    // centrale audio-repository, daarna in de oude mappen.
+    return wordFileCandidates(word);
   }
 
   // Zoekt het eerste adres dat echt bestaat. Het resultaat wordt
@@ -545,7 +581,7 @@
   function playInstruction() {
     const candidates = mediaCandidates(
       MEDIA.instruction,
-      INSTRUCTION_FOLDER,
+      INSTRUCTION_FOLDERS,
       AUDIO_EXTENSIONS,
     );
     findFirst(candidates, "audio").then((source) => {
@@ -578,7 +614,7 @@
 
     const instructionCandidates = mediaCandidates(
       MEDIA.instruction,
-      INSTRUCTION_FOLDER,
+      INSTRUCTION_FOLDERS,
       AUDIO_EXTENSIONS,
     );
     if (instructionCandidates.length) {

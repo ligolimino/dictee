@@ -33,9 +33,9 @@ Extra mogelijkheden in de link (alleen samen met `weergave=volledig`):
 
 | In de link | Betekenis |
 |---|---|
-| `instructie=naam` | Instructie-audio uit `assets/audio/instructies/`. |
+| `instructie=naam` | Instructie-audio uit de repository **audio** (`instructies/`), anders uit `assets/audio/instructies/`. |
 | `beeld=naam` | Afbeelding uit `assets/afbeeldingen/`. |
-| `audio=naam` | Woordaudio uit `assets/audio/woorden/`. |
+| `audio=naam` | Audio uit de repository **audio** (`zinnen/` of de woordmappen), anders uit `assets/audio/woorden/`. |
 | `audio=geen` | Geen luisterknop. |
 
 - In Excel typ je alleen de bestandsnaam. De extensie mag je weglaten:
@@ -83,3 +83,12 @@ niet. De oefening blijft werken.
 Verhoog in `index.html` en `beheer/index.html` het versienummer achter
 `styles.css?v=` en `app.js?v=`. Anders tonen telefoons nog een tijd de oude
 versie.
+
+## Opnames staan centraal
+
+Sinds oktober 2026 staan alle opnames in één repository: **ligolimino/audio**
+(`klanken/`, `woorden/<eerste letter>/`, `woorden/nonsens/`, `instructies/`,
+`zinnen/`). Deze tool zoekt daar eerst. De oude mappen in deze repository
+blijven als tweede kans bestaan, zodat oudere links altijd blijven werken.
+Nieuwe opnames voeg je toe met de createpagina of rechtstreeks in de
+audio-repository.
