@@ -29,11 +29,13 @@
 
   // Mappen in deze repository voor eigen bestanden.
   const IMAGE_FOLDER = "assets/afbeeldingen/";
+  // Eerst de centrale afbeeldingen, daarna die van deze repository.
+  const IMAGE_FOLDERS = ["../assets/afbeeldingen/", IMAGE_FOLDER];
 
-  // Alle opnames staan centraal in de repository 'audio'
-  // (ligolimino.github.io/audio/). De oude mappen blijven als tweede kans
+  // Alle opnames en afbeeldingen staan centraal in de repository 'assets'
+  // (ligolimino.github.io/assets/). De oude mappen blijven als tweede kans
   // bestaan, zodat oudere links altijd blijven werken.
-  const CENTRAL_AUDIO = "../audio/";
+  const CENTRAL_AUDIO = "../assets/audio/";
   const INSTRUCTION_FOLDERS = [
     `${CENTRAL_AUDIO}instructies/`,
     "assets/audio/instructies/",
@@ -59,7 +61,7 @@
   }
 
   // Bestandstypes die geprobeerd worden als er geen extensie getypt is.
-  const IMAGE_EXTENSIONS = [".jpg", ".png", ".webp", ".jpeg"];
+  const IMAGE_EXTENSIONS = [".webp", ".jpg", ".png", ".jpeg"];
   const AUDIO_EXTENSIONS = [".mp3", ".m4a", ".wav"];
 
   if (FULL_VIEW) {
@@ -599,7 +601,7 @@
     state.questions.forEach((question, index) => {
       const imageCandidates = mediaCandidates(
         imageValueOf(question),
-        IMAGE_FOLDER,
+        IMAGE_FOLDERS,
         IMAGE_EXTENSIONS,
       );
       if (!imageCandidates.length) return;
