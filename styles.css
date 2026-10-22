@@ -834,7 +834,7 @@ button {
 
   .slot {
     min-width: 38px;
-    padding: 2px 5px 1px;
+    padding: 2px 3px 1px;
     border-bottom-width: 2px;
     font-size: clamp(1.8rem, 8vw, 2.7rem);
   }
@@ -1133,7 +1133,7 @@ body,
 }
 .word-slots .slot {
   flex: 0 0 auto;
-  min-width: 1.05em;
-  padding: 0.06em 0.10em 0.04em;
+  min-width: 1.00em;
+  padding: 0.06em 0.00em 0.04em;
   white-space: pre;
 }
