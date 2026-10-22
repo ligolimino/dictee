@@ -752,7 +752,7 @@
       }
 
       // Breedte in em: zo krimpt het vakje mee als de letters kleiner worden.
-      const minimumWidth = Math.max(1.05, grapheme.length * 0.9);
+      const minimumWidth = Math.max(0.7, grapheme.length * 0.6);
       const typedChunk = typedChunks[index] || " ";
 
       return `<span
