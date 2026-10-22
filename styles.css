@@ -1112,3 +1112,27 @@ body,
 .feedback {
   margin-top: 10px;
 }
+/* Letterplaatsen: elk woord blijft op één rij. app.js (fitWordSlots)
+   maakt de letters kleiner als een woord niet past. Marges en breedtes
+   staan in em, zodat ze mee krimpen met de letter. */
+.dictation > .word-slots,
+.full-view .dictation > .word-slots {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  justify-self: stretch;
+  column-gap: clamp(18px, 5vw, 36px);
+  row-gap: 10px;
+}
+.word-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  gap: clamp(4px, 1.4vw, 10px);
+}
+.word-slots .slot {
+  flex: 0 0 auto;
+  min-width: 1.05em;
+  padding: 0.06em 0.16em 0.04em;
+  white-space: pre;
+}

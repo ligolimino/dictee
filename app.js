@@ -231,7 +231,13 @@
       if (!missing.length) missing = [...graphemes.keys()];
 
       questions.push({
-        word: graphemes.join(""),
+        // Spaties tussen woorden blijven bewaard: zo kan het dictee elk
+        // woord als aparte groep tonen.
+        word: enteredWord
+          .split(/\s+/)
+          .map((part) => tokenize(part).join(""))
+          .filter(Boolean)
+          .join(" "),
         graphemes,
         missing,
         showCopyWord: valueFor(examples, index).toLowerCase() === "ja",
@@ -654,6 +660,67 @@
       <button class="mode-card" data-action="booklet" aria-label="Klik-klakboekje">${icon("book")}</button>
     </div></section>`;
   }
+  // Verdeel de letterplaatsen over de woorden. Een vraag met spaties
+  // (bv. "de kat") geeft meerdere groepen; anders is het één groep.
+  function wordGroupsOf(question) {
+    const all = [...question.graphemes.keys()];
+    const parts = String(question.word || "")
+      .trim()
+      .split(/\s+/)
+      .map((part) => tokenize(part).length)
+      .filter((count) => count > 0);
+    const total = parts.reduce((sum, count) => sum + count, 0);
+    if (parts.length < 2 || total !== all.length) return [all];
+    let start = 0;
+    return parts.map((count) => {
+      const group = all.slice(start, start + count);
+      start += count;
+      return group;
+    });
+  }
+
+  // Maak de letters kleiner tot elk woord op één rij past.
+  const MIN_SLOT_FONT_PX = 14;
+  function fitWordSlots() {
+    const row = app.querySelector(".word-slots");
+    if (!row) return;
+    const slots = [...row.querySelectorAll(".slot")];
+    const groups = [...row.querySelectorAll(".word-group")];
+    if (!slots.length || !groups.length) return;
+
+    // Begin altijd van de gewone grootte uit styles.css.
+    slots.forEach((slot) => (slot.style.fontSize = ""));
+    groups.forEach((group) => (group.style.columnGap = ""));
+    const baseSize = parseFloat(getComputedStyle(slots[0]).fontSize);
+    const baseGap = parseFloat(getComputedStyle(groups[0]).columnGap) || 0;
+    const available = row.clientWidth;
+    if (!baseSize || !available) return;
+
+    let size = baseSize;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const widest = Math.max(...groups.map((group) => group.scrollWidth));
+      if (widest <= available) break;
+      const next = Math.max(
+        MIN_SLOT_FONT_PX,
+        Math.floor(size * (available / widest) * 0.98),
+      );
+      if (next >= size) break;
+      size = next;
+      slots.forEach((slot) => (slot.style.fontSize = `${size}px`));
+      // Ook de ruimte tussen de streepjes krimpt mee.
+      const gap = Math.max(2, Math.round((baseGap * size) / baseSize));
+      groups.forEach((group) => (group.style.columnGap = `${gap}px`));
+    }
+  }
+
+  let fitTimer = null;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(fitTimer);
+    fitTimer = window.setTimeout(fitWordSlots, 80);
+  });
+  // Het lettertype Andika laadt soms pas na de eerste weergave.
+  document.fonts?.ready.then(fitWordSlots);
+
   function dictation() {
     if (!state.questions.length) {
       state.mode = "home";
@@ -679,20 +746,30 @@
       offset += graphemeLength;
     });
 
-    const slots = question.graphemes
-      .map((grapheme, index) => {
-        if (!question.missing.includes(index)) {
-          return `<span class="slot">${escapeHtml(grapheme)}</span>`;
-        }
+    const slotHtml = (grapheme, index) => {
+      if (!question.missing.includes(index)) {
+        return `<span class="slot">${escapeHtml(grapheme)}</span>`;
+      }
 
-        const minimumWidth = Math.max(48, grapheme.length * 42);
-        const typedChunk = typedChunks[index] || " ";
+      // Breedte in em: zo krimpt het vakje mee als de letters kleiner worden.
+      const minimumWidth = Math.max(1.05, grapheme.length * 0.9);
+      const typedChunk = typedChunks[index] || " ";
 
-        return `<span
-          class="slot missing ${state.result}"
-          style="min-width:${minimumWidth}px"
-        >${escapeHtml(typedChunk)}</span>`;
-      })
+      return `<span
+        class="slot missing ${state.result}"
+        style="min-width:${minimumWidth}em"
+      >${escapeHtml(typedChunk)}</span>`;
+    };
+
+    // Elk woord krijgt een eigen groep die nooit afbreekt. Alleen tussen
+    // woorden mag de rij naar een volgende lijn gaan.
+    const slots = wordGroupsOf(question)
+      .map(
+        (indexes) =>
+          `<span class="word-group">${indexes
+            .map((index) => slotHtml(question.graphemes[index], index))
+            .join("")}</span>`,
+      )
       .join("");
 
     const isSeries = state.questions.length > 1;
@@ -800,6 +877,7 @@
           </div>
         </div>
       </section>`;
+    fitWordSlots();
   }
 
 
