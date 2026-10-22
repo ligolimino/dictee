@@ -334,7 +334,7 @@ button {
 .series-missing .chip {
   min-width: 38px;
   min-height: 38px;
-  padding: 5px 9px;
+  padding: 5px 7px;
   color: #09b9bb;
   border-color: #09b9bb;
 
@@ -675,6 +675,7 @@ button {
 }
 .exercise-info span {
   color: #5c7280;
+
   font-size: 0.9rem;
 }
 .exercise-item .action {
@@ -1133,6 +1134,6 @@ body,
 .word-slots .slot {
   flex: 0 0 auto;
   min-width: 1.05em;
-  padding: 0.06em 0.16em 0.04em;
+  padding: 0.06em 0.10em 0.04em;
   white-space: pre;
 }
