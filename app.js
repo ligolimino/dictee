@@ -21,6 +21,16 @@
   const FULL_VIEW =
     (PAGE_PARAMETERS.get("weergave") || "").trim().toLowerCase() ===
     "volledig";
+  // grootte=125: letters 125 % van de gewone grootte (50 tot 200). De
+  // vakjes worden nooit breder dan er plaats is.
+  const TEXT_SIZE = (() => {
+    const value = Number.parseFloat(
+      (PAGE_PARAMETERS.get("grootte") || "").replace(",", "."),
+    );
+    if (!Number.isFinite(value) || value <= 0) return 1;
+    return Math.min(2, Math.max(0.5, value / 100));
+  })();
+
   const MEDIA = {
     instruction: (PAGE_PARAMETERS.get("instructie") || "").trim(),
     image: (PAGE_PARAMETERS.get("beeld") || "").trim(),
@@ -688,13 +698,25 @@
     const groups = [...row.querySelectorAll(".word-group")];
     if (!slots.length || !groups.length) return;
 
-    // Begin altijd van de gewone grootte uit styles.css.
+    // Begin altijd van de gewone grootte uit styles.css (maal grootte=).
     slots.forEach((slot) => (slot.style.fontSize = ""));
     groups.forEach((group) => (group.style.columnGap = ""));
-    const baseSize = parseFloat(getComputedStyle(slots[0]).fontSize);
-    const baseGap = parseFloat(getComputedStyle(groups[0]).columnGap) || 0;
+    const copyWord = app.querySelector(".copy-word");
+    if (copyWord) copyWord.style.fontSize = "";
+    const baseSize =
+      parseFloat(getComputedStyle(slots[0]).fontSize) * TEXT_SIZE;
+    const baseGap =
+      (parseFloat(getComputedStyle(groups[0]).columnGap) || 0) * TEXT_SIZE;
     const available = row.clientWidth;
     if (!baseSize || !available) return;
+    if (TEXT_SIZE !== 1) {
+      slots.forEach((slot) => (slot.style.fontSize = `${baseSize}px`));
+      groups.forEach((group) => (group.style.columnGap = `${baseGap}px`));
+      if (copyWord) {
+        const copySize = parseFloat(getComputedStyle(copyWord).fontSize);
+        copyWord.style.fontSize = `${copySize * TEXT_SIZE}px`;
+      }
+    }
 
     let size = baseSize;
     for (let attempt = 0; attempt < 6; attempt++) {
