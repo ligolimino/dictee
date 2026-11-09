@@ -142,7 +142,26 @@
     }
     // Niets opgegeven: zoek de opname van het woord zelf, eerst in de
     // centrale audio-repository, daarna in de oude mappen.
+    if (/\s/.test(word.trim())) return sentenceFileCandidates(word);
     return wordFileCandidates(word);
+  }
+
+  // Een korte zin: de opname in audio/zinnen/, met dezelfde naam die de
+  // createpagina gebruikt ("de kat" wordt "de-kat.mp3").
+  function sentenceFileCandidates(sentence) {
+    const plain = sentence
+      .toLowerCase()
+      .replace(/[.?!,;:]+$/, "")
+      .replace(/[^a-z0-9à-ÿ\s-]/g, "")
+      .trim();
+    const names = [...new Set([
+      plain.replace(/\s+/g, "-"),
+      plain,
+      plain.replace(/\s+/g, "_"),
+    ])];
+    return NAMED_AUDIO_FOLDERS.flatMap((folder) =>
+      names.map((name) => absoluteUrl(folder + encodePath(name + ".mp3"))),
+    );
   }
 
   // Zoekt het eerste adres dat echt bestaat. Het resultaat wordt
@@ -220,7 +239,11 @@
 
     const questions = [];
     words.forEach((enteredWord, index) => {
-      const graphemes = tokenize(enteredWord);
+      // Bij een korte zin elk woord apart: zo wordt bv. "de eend" niet
+      // "d|ee|e|n|d" (de e van 'de' en die van 'eend' samen als ee).
+      const graphemes = enteredWord
+        .split(/\s+/)
+        .flatMap((part) => tokenize(part));
       if (!graphemes.length) return;
 
       const enteredPositions = valueFor(positionLists, index);
