@@ -808,7 +808,8 @@
 
     // Elk woord krijgt een eigen groep die nooit afbreekt. Alleen tussen
     // woorden mag de rij naar een volgende lijn gaan.
-    const slots = wordGroupsOf(question)
+    const groups = wordGroupsOf(question);
+    const slots = groups
       .map(
         (indexes) =>
           `<span class="word-group">${indexes
@@ -913,7 +914,7 @@
       <section class="screen dictation">
         ${FULL_VIEW ? `<div class="dictation-media">${instructionBar()}${progress}${listenButton}${image}</div>` : progress}
         ${showCopyWord ? `<div class="copy-word">${escapeHtml(question.word)}</div>` : ""}
-        <div class="word-slots">${slots}</div>
+        <div class="word-slots${groups.length > 1 ? " sentence" : ""}">${slots}</div>
         ${feedback}
                 <div class="keyboard ${keyboardMode === "cijfers" ? "numbers" : ""}">
           ${keyboardRows}

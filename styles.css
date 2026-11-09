@@ -1131,6 +1131,11 @@ body,
   align-items: flex-end;
   gap: clamp(4px, 1.4vw, 10px);
 }
+/* Een korte zin: de letters van één woord dicht bij elkaar, zodat de
+   woorden duidelijk als groepjes te zien zijn. */
+.word-slots.sentence .word-group {
+  gap: clamp(2px, 0.5vw, 4px);
+}
 .word-slots .slot {
   flex: 0 0 auto;
   min-width: 1.00em;
