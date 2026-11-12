@@ -809,13 +809,28 @@
     // Elk woord krijgt een eigen groep die nooit afbreekt. Alleen tussen
     // woorden mag de rij naar een volgende lijn gaan.
     const groups = wordGroupsOf(question);
+    // Gegeven letters die naast elkaar staan, komen samen in één vakje.
+    // Zo staan ze op gewone letterafstand (bv. "het") en niet uit elkaar.
+    const groupHtml = (indexes) => {
+      const parts = [];
+      let given = "";
+      const flushGiven = () => {
+        if (given) parts.push(`<span class="slot">${escapeHtml(given)}</span>`);
+        given = "";
+      };
+      indexes.forEach((index) => {
+        if (question.missing.includes(index)) {
+          flushGiven();
+          parts.push(slotHtml(question.graphemes[index], index));
+        } else {
+          given += question.graphemes[index];
+        }
+      });
+      flushGiven();
+      return parts.join("");
+    };
     const slots = groups
-      .map(
-        (indexes) =>
-          `<span class="word-group">${indexes
-            .map((index) => slotHtml(question.graphemes[index], index))
-            .join("")}</span>`,
-      )
+      .map((indexes) => `<span class="word-group">${groupHtml(indexes)}</span>`)
       .join("");
 
     const isSeries = state.questions.length > 1;
