@@ -1142,3 +1142,10 @@ body,
   padding: 0.06em 0.00em 0.04em;
   white-space: pre;
 }
+
+/* Gegeven letters (niet in te vullen) krijgen geen onderlijning.
+   De lijn wordt doorzichtig in plaats van weggehaald, zodat alle
+   letters netjes op dezelfde hoogte blijven staan. */
+.word-slots .slot:not(.missing) {
+  border-bottom-color: transparent;
+}
