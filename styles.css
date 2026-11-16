@@ -1148,4 +1148,8 @@ body,
    letters netjes op dezelfde hoogte blijven staan. */
 .word-slots .slot:not(.missing) {
   border-bottom-color: transparent;
+  /* Gegeven letters zo breed als ze zijn: een smalle letter (l, i, t)
+     krijgt geen lege ruimte naast zich. Alleen de in te vullen vakjes
+     hebben een minimumbreedte. */
+  min-width: 0;
 }
